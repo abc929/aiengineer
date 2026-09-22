@@ -72,7 +72,16 @@
   .answer.wrong{border-color:var(--bad);background:#43162a;opacity:1}
 
   .slot{display:grid;gap:6px;min-height:8px;margin-bottom:12px}
-  .slot-item{background:#0f3d31;border:1px solid #1e6b57;border-radius:10px;padding:9px 13px;font-size:14px}
+  .slot-item{background:#0f3d31;border:1px solid #1e6b57;border-radius:10px;padding:9px 13px;font-size:14px;
+    color:var(--text);font-family:inherit;text-align:left;cursor:pointer;display:flex;align-items:center;
+    gap:10px;width:100%;transition:all .12s}
+  .slot-item:hover{border-color:var(--bad);background:#2e1a26}
+  .slot-item .slot-x{margin-left:auto;color:var(--muted);font-size:13px;font-weight:700}
+  .slot-item:hover .slot-x{color:var(--bad)}
+  .slot-empty{color:#6d6290;font-size:13px;font-style:italic;padding:9px 2px;border:1px dashed var(--line);
+    border-radius:10px;text-align:center}
+  .order-controls{display:flex;gap:16px;margin-top:12px}
+  .reset-btn:disabled{opacity:.35;cursor:default;text-decoration:none}
   .tray{display:flex;flex-wrap:wrap;gap:8px}
   .chip{background:#231646;border:1px solid var(--line);color:var(--text);border-radius:999px;padding:9px 15px;font-size:14px;cursor:pointer;font-family:inherit}
   .chip:hover:not(:disabled){border-color:var(--accent);background:#2b1b58}
@@ -152,6 +161,17 @@
   .cert .sign div{flex:1;border-top:1.5px solid #cbc4e0;padding-top:6px}
   .cert-badge{position:absolute;top:16px;right:22px;font-size:40px}
   .cert .avatar-svg{filter:none}
+
+  /* ---------- miss review ---------- */
+  #go-review{display:grid;gap:10px}
+  .review-card{background:#231646;border:1px solid var(--line);border-left:4px solid var(--bad);
+    border-radius:12px;padding:14px 16px}
+  .review-lvl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);font-weight:800;margin-bottom:6px}
+  .review-q{font-size:15px;font-weight:600;line-height:1.5;margin-bottom:8px}
+  .review-a{font-size:14px;line-height:1.5;color:#86efac;background:#0f2e28;border:1px solid #1e6b57;
+    border-radius:8px;padding:8px 11px}
+  .review-a span{color:var(--muted);font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+  .review-why{color:var(--muted);font-size:13px;line-height:1.6;margin-top:8px}
 
   /* ---------- load failure notice ---------- */
   .boot-error{background:#43162a;border:1px solid var(--bad);border-radius:var(--radius);
@@ -344,13 +364,21 @@
       </div>
 
       <div id="go-weak-wrap" class="hidden">
-        <strong>Review these first:</strong>
+        <strong>Weakest topics:</strong>
         <ul id="go-weak"></ul>
       </div>
 
+      <div id="go-review-wrap" class="hidden">
+        <h3 style="margin:22px 0 2px">📖 What you missed</h3>
+        <p class="sub" id="go-review-count" style="margin:0 0 12px;font-size:14px"></p>
+        <div id="go-review"></div>
+      </div>
+
+      <p class="sub" id="go-restart-note" style="margin-top:20px;font-size:14px"></p>
+
       <div class="row">
         <button class="btn hidden" id="go-cert-btn">🏅 Get your certificate</button>
-        <button class="btn" id="go-again">↻ Play again (new questions)</button>
+        <button class="btn" id="go-again">↻ Start a new run</button>
         <button class="btn ghost" id="go-home">Home</button>
       </div>
       <p class="seed">Run seed: <span id="go-seed"></span></p>
@@ -1294,29 +1322,83 @@ const REWARDS = {
 /* ============================================================
    SVG BUILDER
    ============================================================ */
-function hairSVG(style, c) {
-  const d = shade(c, -28);
+/* ------------------------------------------------------------
+   HAIR — drawn in TWO layers so it can never cover the face.
+
+     hairBack()  is painted BEFORE the head, so long styles can
+                 flow as far down as they like; the head covers
+                 whatever overlaps.
+     hairFront() is painted AFTER the head, so it must stay OUT
+                 of the face. The face box it must avoid is
+                 x 40..80, y 42..63 (eyes, blush, mouth).
+
+   The head is a circle: centre (60, 48), radius 23.
+   ------------------------------------------------------------ */
+
+/* Everything behind the head. Free-form — the head hides the overlap. */
+function hairBack(style, c) {
+  const d = shade(c, -26);
   switch (style) {
     case 'long':
-      return `<path d="M34 46c0-16 12-26 26-26s26 10 26 26v34c0 6-6 9-9 4-2-16-4-22-4-22-6 5-18 7-26 4-4-2-6-4-6-4s-2 6-4 22c-3 5-9 2-9-4z" fill="${c}"/>
-              <path d="M38 40c6-12 16-16 22-16s16 4 22 16c-8-6-14-8-22-8s-14 2-22 8z" fill="${d}"/>`;
+      return `<path d="M29 58c0-25 14-40 31-40s31 15 31 40v50c0 7-8 9-11 2-3-14-5-33-6-45H46c-1 12-3 31-6 45-3 7-11 5-11-2z" fill="${c}"/>
+              <path d="M40 96h8v18c0 4-6 5-8 1zM72 96h8l-1 19c-2 4-8 3-8-1z" fill="${d}" opacity=".55"/>`;
     case 'short':
-      return `<path d="M36 46c0-15 11-25 24-25s24 10 24 25c0 3-1 5-2 5-2-9-6-13-10-14-5 4-20 6-30 2-3 3-4 7-4 12-1 0-2-2-2-5z" fill="${c}"/>`;
+      return `<path d="M36 52c0-17 11-28 24-28s24 11 24 28v18c0 4-5 5-6 1-2-9-4-13-4-13H46s-2 4-4 13c-1 4-6 3-6-1z" fill="${c}"/>`;
     case 'curly':
-      return `<g fill="${c}"><circle cx="42" cy="34" r="10"/><circle cx="56" cy="27" r="11"/><circle cx="70" cy="30" r="10"/><circle cx="80" cy="40" r="9"/><circle cx="38" cy="46" r="8"/><circle cx="83" cy="50" r="8"/></g>
-              <g fill="${d}" opacity=".5"><circle cx="50" cy="30" r="4"/><circle cx="74" cy="36" r="4"/></g>`;
+      return `<g fill="${c}"><circle cx="38" cy="36" r="13"/><circle cx="52" cy="26" r="13"/><circle cx="68" cy="26" r="13"/>
+              <circle cx="82" cy="36" r="13"/><circle cx="33" cy="52" r="11"/><circle cx="87" cy="52" r="11"/>
+              <circle cx="36" cy="66" r="9"/><circle cx="84" cy="66" r="9"/></g>`;
     case 'locs':
-      return `<path d="M36 48c0-16 11-27 24-27s24 11 24 27v2H36z" fill="${c}"/>
-              <g fill="${c}"><rect x="33" y="44" width="6" height="40" rx="3"/><rect x="42" y="48" width="6" height="34" rx="3"/><rect x="72" y="48" width="6" height="34" rx="3"/><rect x="81" y="44" width="6" height="40" rx="3"/></g>
-              <g fill="${d}" opacity=".55"><rect x="33" y="60" width="6" height="4" rx="2"/><rect x="81" y="60" width="6" height="4" rx="2"/><rect x="42" y="64" width="6" height="4" rx="2"/><rect x="72" y="64" width="6" height="4" rx="2"/></g>`;
+      return `<path d="M33 56c0-20 12-33 27-33s27 13 27 33v14H33z" fill="${c}"/>
+              <g fill="${c}"><rect x="28" y="46" width="7" height="58" rx="3.5"/><rect x="37" y="52" width="7" height="50" rx="3.5"/>
+              <rect x="76" y="52" width="7" height="50" rx="3.5"/><rect x="85" y="46" width="7" height="58" rx="3.5"/></g>
+              <g fill="${d}" opacity=".5"><rect x="28" y="68" width="7" height="5" rx="2.5"/><rect x="85" y="68" width="7" height="5" rx="2.5"/>
+              <rect x="37" y="76" width="7" height="5" rx="2.5"/><rect x="76" y="76" width="7" height="5" rx="2.5"/></g>`;
     case 'puffs':
-      return `<path d="M37 47c0-14 10-24 23-24s23 10 23 24v2H37z" fill="${c}"/>
-              <circle cx="31" cy="36" r="13" fill="${c}"/><circle cx="89" cy="36" r="13" fill="${c}"/>
-              <circle cx="28" cy="33" r="5" fill="${d}" opacity=".45"/><circle cx="86" cy="33" r="5" fill="${d}" opacity=".45"/>`;
+      return `<path d="M36 52c0-17 11-28 24-28s24 11 24 28v16H36z" fill="${c}"/>
+              <circle cx="27" cy="40" r="16" fill="${c}"/><circle cx="93" cy="40" r="16" fill="${c}"/>
+              <circle cx="23" cy="35" r="6" fill="${d}" opacity=".4"/><circle cx="89" cy="35" r="6" fill="${d}" opacity=".4"/>`;
     case 'fade':
     default:
-      return `<path d="M38 46c0-14 10-23 22-23s22 9 22 23c0 2 0 4-1 4-3-7-8-11-12-12-6 3-16 4-24 1-4 2-6 5-6 11-1 0-1-2-1-4z" fill="${c}"/>
-              <path d="M38 48c2-4 6-6 10-6h24c4 0 8 2 10 6z" fill="${d}" opacity=".6"/>`;
+      return `<path d="M38 50c0-15 10-25 22-25s22 10 22 25v10H38z" fill="${c}"/>`;
+  }
+}
+
+/* Everything in front of the head. MUST clear the face box. */
+function hairFront(style, c) {
+  const d = shade(c, -26);
+
+  /* Shared crown cap: follows the top of the head, and its lowest
+     point across the face is y = 40 — two units above the eyebrows. */
+  const cap =
+    `<path d="M37.6 50a22.4 22.4 0 0 1 44.8 0c-3-6-9-10-14-11-6 2-12 2-17 1-5-1-9 4-13 10z" fill="${c}"/>`;
+
+  switch (style) {
+    case 'long':
+      /* Side lengths hang OUTSIDE the face, never across it. */
+      return cap +
+        `<path d="M37.6 47c-2 10-3 22-3 34 0 5 7 6 8 1 2-13 3-24 3-32z" fill="${c}"/>
+         <path d="M82.4 47c2 10 3 22 3 34 0 5-7 6-8 1-2-13-3-24-3-32z" fill="${c}"/>
+         <path d="M40 30c6-7 14-10 20-10s14 3 20 10c-7-4-13-6-20-6s-13 2-20 6z" fill="${d}" opacity=".55"/>`;
+    case 'short':
+      return cap +
+        `<path d="M38 44c1-4 3-7 5-9 5 4 10 5 17 5s12-1 17-5c2 2 4 5 5 9-3-9-9-15-22-15s-19 6-22 15z" fill="${d}" opacity=".5"/>`;
+    case 'curly':
+      /* Crown curls only: every circle sits fully above the eyes. */
+      return `<g fill="${c}"><circle cx="46" cy="31" r="9.5"/><circle cx="60" cy="26" r="10.5"/><circle cx="74" cy="31" r="9.5"/>
+              <circle cx="35" cy="36" r="8"/><circle cx="85" cy="36" r="8"/></g>
+              <g fill="${d}" opacity=".45"><circle cx="52" cy="27" r="3.5"/><circle cx="68" cy="27" r="3.5"/></g>`;
+    case 'locs':
+      return cap +
+        `<g fill="${c}"><rect x="33" y="40" width="6.5" height="40" rx="3.2"/><rect x="80.5" y="40" width="6.5" height="40" rx="3.2"/></g>
+         <g fill="${d}" opacity=".5"><rect x="33" y="58" width="6.5" height="4.5" rx="2.2"/><rect x="80.5" y="58" width="6.5" height="4.5" rx="2.2"/></g>`;
+    case 'puffs':
+      return cap +
+        `<path d="M38 42c3-9 11-14 22-14s19 5 22 14c-5-6-12-9-22-9s-17 3-22 9z" fill="${d}" opacity=".5"/>`;
+    case 'fade':
+    default:
+      return cap +
+        `<path d="M39 46c2-7 9-12 21-12s19 5 21 12c-4-5-11-8-21-8s-17 3-21 8z" fill="${d}" opacity=".6"/>`;
   }
 }
 
@@ -1485,12 +1567,15 @@ function renderAvatar(A, size) {
   <circle cx="33.5" cy="134" r="6" fill="${skin}"/>
   <circle cx="86.5" cy="134" r="6" fill="${skin}"/>
 
+  <!-- hair BEHIND the head (long lengths live here) -->
+  ${hairBack(A.hair, A.hairColor)}
+
   <!-- neck + head -->
   <rect x="54" y="66" width="12" height="14" rx="5" fill="${dark}"/>
   <circle cx="60" cy="48" r="23" fill="${skin}"/>
 
-  <!-- hair -->
-  <g clip-path="none">${hairSVG(A.hair, A.hairColor)}</g>
+  <!-- hair IN FRONT (crown only — stays clear of the face) -->
+  ${hairFront(A.hair, A.hairColor)}
 
   <!-- face -->
   <circle cx="52" cy="48" r="2.6" fill="#1c1917"/>
@@ -1709,38 +1794,65 @@ function renderQuestion() {
   box.innerHTML = '';
 
   if (q.type === 'order') {
-    $('q-hint').textContent = 'Click the steps in the correct order.';
-    const tray = el('div', 'tray');
+    $('q-hint').textContent = 'Click the steps in order. Click a step you placed to take it back.';
+    q.picked = [];
     const slot = el('div', 'slot');
-    slot.id = 'order-slot';
-    q.shuffled.forEach((step, i) => {
-      const b = el('button', 'chip', step);
-      b.onclick = () => {
-        if (S.locked || b.disabled) return;
-        b.disabled = true;
-        q.picked.push(step);
-        const s = el('div', 'slot-item', `${q.picked.length}. ${step}`);
-        slot.appendChild(s);
-        if (q.picked.length === q.steps.length) {
-          const ok = q.picked.join('|') === q.steps.join('|');
-          judge(ok, q);
-        }
-      };
-      tray.appendChild(b);
-    });
-    const reset = el('button', 'reset-btn', '↺ Start over');
-    // Starting over must NOT refill the clock — no free time exploit.
-    reset.onclick = () => {
-      if (S.locked) return;
-      const carry = S.timeLeft;
-      q.picked = [];
-      renderQuestion();
-      S.timeLeft = carry;
-      paintTimer();
+    const tray = el('div', 'tray');
+    const controls = el('div', 'order-controls');
+    const undo = el('button', 'reset-btn', '↶ Undo last');
+    const reset = el('button', 'reset-btn', '↺ Clear all');
+    controls.appendChild(undo);
+    controls.appendChild(reset);
+
+    /* Redraw from state, so removing a step is as easy as adding one.
+       Nothing here touches the timer — taking a step back is free. */
+    const draw = () => {
+      slot.innerHTML = '';
+      tray.innerHTML = '';
+
+      q.picked.forEach((idx, pos) => {
+        const item = el('button', 'slot-item', `${pos + 1}. ${q.shuffled[idx]}`);
+        const x = el('span', 'slot-x', '✕');
+        item.appendChild(x);
+        item.title = 'Click to take this step back';
+        item.onclick = () => {
+          if (S.locked) return;
+          q.picked.splice(pos, 1);   // remove just this one, keep the rest
+          draw();
+        };
+        slot.appendChild(item);
+      });
+
+      if (!q.picked.length) {
+        slot.appendChild(el('div', 'slot-empty', 'Your order will appear here.'));
+      }
+
+      q.shuffled.forEach((step, idx) => {
+        if (q.picked.indexOf(idx) !== -1) return;   // already placed
+        const b = el('button', 'chip', step);
+        b.onclick = () => {
+          if (S.locked) return;
+          q.picked.push(idx);
+          draw();
+          if (q.picked.length === q.steps.length) {
+            const given = q.picked.map(i => q.shuffled[i]);
+            judge(given.join('|') === q.steps.join('|'), q);
+          }
+        };
+        tray.appendChild(b);
+      });
+
+      undo.disabled = !q.picked.length;
+      reset.disabled = !q.picked.length;
     };
+
+    undo.onclick = () => { if (!S.locked && q.picked.length) { q.picked.pop(); draw(); } };
+    reset.onclick = () => { if (!S.locked && q.picked.length) { q.picked = []; draw(); } };
+
+    draw();
     box.appendChild(slot);
     box.appendChild(tray);
-    box.appendChild(reset);
+    box.appendChild(controls);
   } else {
     $('q-hint').textContent = q.type === 'tf' ? 'True or false?' : 'Pick the best answer.';
     q.options.forEach(opt => {
@@ -1815,13 +1927,26 @@ function judge(ok, q, timedOut) {
     if (!timedOut) S.lives--;
   }
 
-  S.log.push({ level: S.level, text: q.text, ok });
+  /* Record enough to REVIEW the question later, not just whether it was missed.
+     A player who lost should be able to read back exactly what tripped them. */
+  S.log.push({
+    level: S.level,
+    text: q.text,
+    ok,
+    timedOut: !!timedOut,
+    answer: q.type === 'order'
+      ? q.steps.map((s, i) => `${i + 1}. ${s}`).join('  →  ')
+      : (q.options.find(o => o.ok) || {}).t,
+    explain: q.explain
+  });
 
   const fb = $('feedback');
   fb.className = 'feedback ' + (ok ? 'good' : 'bad');
   const head = el('div', 'fb-head', ok
     ? S.streak >= 3 ? `Correct — ${S.streak} in a row! +${base + speed + streakBonus}` : `Correct! +${base + speed + streakBonus}`
-    : timedOut ? 'Out of time — streak reset, but no life lost.' : 'Not quite. −1 life.');
+    : timedOut ? 'Out of time — streak reset, but no life lost.'
+    : S.lives <= 0 ? 'Not quite — that was your last life.'
+    : `Not quite. −1 life (${S.lives} left).`);
   const body = el('div', 'fb-body', q.explain);
   fb.appendChild(head);
   fb.appendChild(body);
@@ -1837,7 +1962,12 @@ function judge(ok, q, timedOut) {
   $('hud-lives').textContent = '❤️'.repeat(Math.max(S.lives, 0)) || '💀';
 
   if (S.lives <= 0) {
-    setTimeout(() => gameOver(false), 900);
+    // Let the player read the explanation before the run ends.
+    const go = el('button', 'btn', 'See what you missed →');
+    go.onclick = () => gameOver(false);
+    $('answers').innerHTML = '';
+    $('answers').appendChild(go);
+    go.focus();
     return;
   }
   const nb = $('next-btn');
@@ -2036,6 +2166,7 @@ function gameOver(won) {
     $('go-best').textContent = `Best: ${best.toLocaleString()}`;
   }
 
+  /* ---- weakest topics ---- */
   const weak = {};
   S.log.filter(l => !l.ok).forEach(l => { weak[l.level] = (weak[l.level] || 0) + 1; });
   const list = $('go-weak');
@@ -2051,8 +2182,41 @@ function gameOver(won) {
     $('go-weak-wrap').classList.add('hidden');
   }
 
+  /* ---- FULL REVIEW: every question you got wrong, with the right answer ---- */
+  const misses = S.log.filter(l => !l.ok);
+  const rev = $('go-review');
+  rev.innerHTML = '';
+  if (misses.length) {
+    $('go-review-wrap').classList.remove('hidden');
+    $('go-review-count').textContent =
+      `${misses.length} question${misses.length > 1 ? 's' : ''} to review`;
+    misses.forEach(m => {
+      const L = window.LEVELS[m.level - 1];
+      const card = el('div', 'review-card');
+      const tag = el('div', 'review-lvl',
+        `Level ${L.n} · ${L.title}${m.timedOut ? ' · ran out of time' : ''}`);
+      const qt = el('div', 'review-q', m.text);
+      const ans = el('div', 'review-a');
+      ans.innerHTML = `<span>Correct answer:</span> ${escapeHTML(m.answer || '')}`;
+      const why = el('div', 'review-why', m.explain);
+      card.appendChild(tag); card.appendChild(qt); card.appendChild(ans); card.appendChild(why);
+      rev.appendChild(card);
+    });
+  } else {
+    $('go-review-wrap').classList.add('hidden');
+  }
+
+  /* ---- be explicit that replaying is a fresh run ---- */
+  $('go-restart-note').textContent = won
+    ? 'Play again for a brand-new set of questions — your gear resets and you start from Level 1.'
+    : 'Playing again starts a fresh run from Level 1 with 3 lives, brand-new questions, and gear earned from scratch.';
+
   $('go-seed').textContent = S.runSeed;
   show('screen-over');
+}
+
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
 /* ============================================================
