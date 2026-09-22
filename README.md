@@ -101,55 +101,6 @@ All question content lives in **`questions.js`**; all character and gear content
   principle: 'Tokens, embeddings, context windows, temperature', gens: L3 },
 ```
 
-**Add a question:** drop another function into that level's list.
-
-```js
-R => ({
-  type: 'mc',
-  text: 'Your question here?',
-  choices: [
-    { t: 'The right answer', ok: true },
-    { t: 'A wrong one', ok: false },
-    { t: 'Another wrong one', ok: false }
-  ],
-  explain: 'Why the right answer is right.'
-})
-```
-
-Use the `R` helper to randomize it: `R.int(a,b)`, `R.pick(array)`, `R.sample(array, n)`,
-`R.shuffle(array)`. Exactly one choice must have `ok: true`.
-
-Other shapes:
-
-```js
-R => ({ type: 'tf', text: '...', answer: false, explain: '...' })
-R => ({ type: 'order', text: '...', steps: ['First','Second','Third'], explain: '...' })
-```
-
-**Change which gear drops where:** edit `REWARDS` in `avatar.js`.
-
-```js
-const REWARDS = { 1: ['goggles','beanie','vest'], /* ... */ 10: ['crown'] };
-```
-
-**Add new gear:** add an entry to `GEAR` (name, `slot`, blurb), draw it as a `case` in
-`gearSVG()`, then list its id in a level's `REWARDS`. Coordinates live on a `0 0 120 180`
-canvas — the head is centered at `(60, 48)`.
-
-**Change the palettes:** `SKINS`, `HAIRCOLORS`, `OUTFITS`, `GENDERS` and `HAIRSTYLES`
-at the top of `avatar.js`.
-
----
-
-## Publishing to GitHub Pages
-
-1. Create a repo and add `index.html`, `questions.js`, `avatar.js`, `game.js`, `README.md`.
-2. **Settings → Pages → Source: Deploy from a branch → `main` / root.**
-3. Your game appears at `https://<username>.github.io/<repo>/`.
-
-To nest it inside an existing class site, drop these files in a `game/` folder and link to
-`/game/` from your schedule page.
-
 ## Classroom ideas
 
 - **Warm-up:** 5 minutes at the start of class — Level 1 through the current level.
@@ -177,6 +128,3 @@ no flashing. Character art is inline SVG with an accessible label. Everything ru
 no tracking, no network calls, no student data collected. The only thing stored is the player's own
 look and high score, in their own browser.
 
-## License
-
-MIT — use it, remix it, teach with it.
